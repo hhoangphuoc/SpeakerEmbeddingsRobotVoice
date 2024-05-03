@@ -8,6 +8,8 @@
 - install the required packages
   `pip install -r requirements.txt`
 
+- **Note:** It is recommended to create a virtual environment (namely `vcrs-venv`) for the project, since the pip version and compatible version of every package is not the latest, so it might cause some issues during the installation.
+
 ## Steps
 
 - Clone the repository from TRIAAN-VC original source: https://github.com/winddori2002/TriAAN-VC, stored in models folder.
