@@ -38,8 +38,8 @@ def ProcessingTrainData(path, cfg):
     # Load and process wav file
 
     # skip pre-emphasis
-    wav_name = os.path.basename(path).split('.')[0]
-    speaker  = wav_name.split('_')[0]
+    wav_name = os.path.basename(path).split('.')[0] # e.g: r1_1111anger
+    speaker  = wav_name.split('_')[0] #eg. r1, r2,...
     sr       = cfg.sampling_rate # ensure sampling rate 16kHz
     wav, fs  = sf.read(path)
     wav, _   = librosa.effects.trim(y=wav, top_db=cfg.top_db) # trim slience
@@ -99,12 +99,18 @@ def SaveFeatures(wav_name, info, mode, cfg):
     np.save(mel_save_path, mel)
     np.save(lf0_save_path, lf0)
     
-    wav_name = wav_name.split('_mic')[0] # p231_001
+    # wav_name = wav_name.split('_')[0] # p231_001
+    wav_name = wav_name.split('_')[1] # p231_001 #r1_1111anger -> 1111anger
 
     return {'mel_len':mel_len, 'speaker':speaker, 'wav_name':wav_name, 'wav_path':wav_path, 'mel_path':mel_save_path, 'lf0_path':lf0_save_path}
     
 
-#-------------------------------------------------------Unused functions-------------------------------------------------------#
+def NormalizeLogMel(wav_name, mel, mean, std):
+    mel = (mel - mean) / (std + 1e-8)
+    return wav_name, mel
+
+
+#-------------------------------------------------------UNUSED FUNCTIONS-------------------------------------------------------#
 
 # ONLY LOAD AND PROCESS WAV FILE
 def LoadWav(path, cfg):
@@ -172,77 +178,51 @@ def GetLogMel(wav, cfg):
     
     return mel, lf0, mel.shape[0]
 
-
-def NormalizeLogMel(wav_name, mel, mean, std):
-    mel = (mel - mean) / (std + 1e-8)
-    return wav_name, mel
-
-def TextCheck(wavs, cfg):
-    
-    wav_files = [i.split('_mic1')[0] for i in wavs]
-    
-    txt_path  = glob(f'{cfg.txt_path}/*/*')
-    txt_files = [os.path.basename(i).split('.txt')[0] for i in txt_path]
-    
-    revised_wavs = []
-    for i in range(len(wavs)):
-        if wav_files[i] in txt_files:
-            revised_wavs.append(wavs[i])
-            
-    return revised_wavs
-
-
 # TODO: CHECK AND REMOVE IF NOT NEEDED
 def GetSpeakerInfo(cfg):
     
-    spk_info = open(cfg.spk_info_path, 'r')
-    gen2spk  = {}
-    all_spks = []
-    for i, line in enumerate(spk_info):
-        if i == 0:
-            continue
-        else:
-            tmp = line.split()
-            spk = tmp[0]
-            all_spks.append(spk)
-            gen = tmp[2]
-            if gen not in gen2spk:
-                gen2spk[gen] = [spk]
-            else:
-                gen2spk[gen].append(spk)    
-    
-    print(f'Total speaker: {len(all_spks)} with Female: {len(gen2spk["F"])} and Male: {len(gen2spk["M"])}')
-    
-    return all_spks, gen2spk
+    # spk_info = open(cfg.spk_info_path, 'r')
+    files = os.listdir(cfg.data_path)
+    all_spks_name = []
+    all_spks_id   = []
+    for file in files:
+        if file.endswith('.wav') and file.split('.')[0] not in all_spks_name:
+            all_spks_name.append(filename)
+
+    for filename in all_spks_name:
+        if filename.split('_')[0] not in all_spks_id:
+            all_spks_id.append(filename.split('_')[0])
+    return all_spks_name, all_spks_id
 
 
 # TODO: CHECK AND REMOVE IF NOT NEEDED
-def SplitDataset(all_spks, cfg):
+def SplitDataset(all_spks_name, cfg):
     
-    all_spks = sorted(all_spks)
-    random.shuffle(all_spks)
-    train_spks = all_spks[:-cfg.eval_spks * 2] # except valid and test unseen speakers
-    valid_spks = all_spks[-cfg.eval_spks * 2:-cfg.eval_spks]
-    test_spks  = all_spks[-cfg.eval_spks:]
+    all_spks_name = sorted(all_spks_name)
+    random.shuffle(all_spks_name)
+    # TODO: DO WE NEED SEPERATE TRAIN, TEST, VALID SPEAKERS?
+    # train_spks = all_spks_name[:-cfg.eval_spks * 2] # except valid and test unseen speakers
+    # valid_spks = all_spks_name[-cfg.eval_spks * 2:-cfg.eval_spks]
+    # test_spks  = all_spks_name[-cfg.eval_spks:]
 
     train_wavs_names = []
     valid_wavs_names = []
     test_wavs_names  = []
     
     for spk in train_spks:
-        spk_wavs       = glob(f'{cfg.data_path}/{spk}/*mic1*')
-        spk_wavs_names = [os.path.basename(p).split('.')[0] for p in spk_wavs]
-        valid_names    = random.sample(spk_wavs_names, int(len(spk_wavs_names) * cfg.s2s_portion))
-        train_names    = [n for n in spk_wavs_names if n not in valid_names]
+        spk_wavs       = glob(f'{spk}.wav') # spk is the speaker name
+        spk_wavs_names = spk
+        valid_names    = random.sample(spk_wavs_names, int(len(spk_wavs_names) * cfg.s2s_portion)) #valid set portion: 0.1
+        train_names    = [n for n in spk_wavs_names if n not in valid_names] # train set portion: 0.9
         test_names     = random.sample(train_names, int(len(spk_wavs_names) * cfg.s2s_portion))
-        train_names    = [n for n in train_names if n not in test_names]
+        train_names    = [n for n in train_names if n not in test_names] # test set portion: 0.1
 
         train_wavs_names += train_names
         valid_wavs_names += valid_names
         test_wavs_names  += test_names
 
     for spk in valid_spks:
-        spk_wavs         = glob(f'{cfg.data_path}/{spk}/*mic1*')
+        spk_wavs         = glob(f'{cfg.data_path}/{spk}/*mic1*') # list of files
         spk_wavs_names   = [os.path.basename(p).split('.')[0] for p in spk_wavs]
         valid_wavs_names += spk_wavs_names
 
@@ -251,10 +231,7 @@ def SplitDataset(all_spks, cfg):
         spk_wavs_names  = [os.path.basename(p).split('.')[0] for p in spk_wavs]
         test_wavs_names += spk_wavs_names
     
-    all_wavs         = glob(f'{cfg.data_path}/*/*mic1.flac')
-    # train_wavs_names = TextCheck(train_wavs_names, cfg) # delete the wavs which don't have text files
-    # valid_wavs_names = TextCheck(valid_wavs_names, cfg)
-    # test_wavs_names  = TextCheck(test_wavs_names, cfg)
+    all_wavs         = glob(f'{cfg.data_path}/*/*wav')
     
     print(f'Total files: {len(all_wavs)}, Train: {len(train_wavs_names)}, Valid: {len(valid_wavs_names)}, Test: {len(test_wavs_names)}, Del Files: {len(all_wavs)-len(train_wavs_names)-len(valid_wavs_names)-len(test_wavs_names)}')
     
