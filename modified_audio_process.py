@@ -110,6 +110,82 @@ def NormalizeLogMel(wav_name, mel, mean, std):
     return wav_name, mel
 
 
+
+##-------------------------------------------------------Train test split-------------------------------------------------------##
+def GetSpeakerInfo(cfg):
+    """
+    Get all the speaker names and speaker ids from the data path
+    - all_audios_name: list of all the names of audios files in every folder, e.g. r1_1111anger, r1_1112anger,...
+    - all_spks_name: list of all the speaker name (folder names). e.g. r1, r2, r3
+    """
+    # spk_info = open(cfg.spk_info_path, 'r') #FIXME: Should we make the same file only for the speaker info?
+    folders = os.listdir(cfg.data_path)
+    all_audios_name = []
+    all_spks_name  = []    
+    for folder in folders:
+        all_spks_name.append(folder) # adding speaker_id 
+        all_audios_name += glob(f'{cfg.data_path}/{folder}/*wav') #FIXME: Do we need to go through every files in the folder instead? A list of all the audio files names
+    all_audios_name = list(set([os.path.basename(name).split('.')[0] for name in all_audios_name])) #get the name including speaker_id and speaker_name, exclude .wav, eg. r1_1111anger
+
+    return all_spks_name, all_audios_name
+
+def SplitDataset(all_spks, cfg):
+    """
+    Split the dataset into train, valid and test set based on the seen/unseen speakers and corresponding audios
+    - train_spks: list of train speaker names -> e.g. r1, r22, r13
+    - valid_spks: list of speaker names for validation -> e.g. r12, r25
+    - test_spks: list of speaker names for test -> e.g. r6, r7, r23,..
+    - train_wavs_names: list of audio names for training
+    - valid_wavs_names: list of audio names for validation
+    - test_wavs_names: list of audio names for testing
+    """
+    
+    all_spks_name = sorted(all_spks)
+    random.shuffle(all_spks_name)
+    # TODO: DO WE NEED SEPERATE TRAIN, TEST, VALID SPEAKERS? IS THIS WILL RETURN WHAT WE WANT?
+    train_spks = all_spks_name[:-cfg.eval_spks * 2] # except valid and test unseen speakers
+    valid_spks = all_spks_name[-cfg.eval_spks * 2:-cfg.eval_spks]
+    test_spks  = all_spks_name[-cfg.eval_spks:]
+
+    train_wavs_names = []
+    valid_wavs_names = []
+    test_wavs_names  = []
+    
+    for spk in train_spks:
+        # spk = r1, r22, r13, ...
+        spk_wavs         = glob(f'{cfg.data_path}/{spk}/*.wav') # list of files for each speaker: r1_1111anger.wav, r1_1112anger.wav, ... (audios of r1)
+        spk_wavs_names = [os.path.basename(path).split('.')[0] for path in spk_wavs] # list of audio names for each speaker: r1_1111anger, r1_1112anger, ...
+
+        valid_names    = random.sample(spk_wavs_names, int(len(spk_wavs_names) * cfg.s2s_portion)) #valid set portion: 0.1
+        train_names    = [n for n in spk_wavs_names if n not in valid_names] # train set portion: 0.9
+        test_names     = random.sample(train_names, int(len(spk_wavs_names) * cfg.s2s_portion))
+        train_names    = [n for n in train_names if n not in test_names] # test set portion: 0.1
+
+        train_wavs_names += train_names
+        valid_wavs_names += valid_names
+        test_wavs_names  += test_names
+
+    for spk in valid_spks:
+        spk_wavs         = glob(f'{cfg.data_path}/{spk}/*.wav') # list of files
+        spk_wavs_names   = [os.path.basename(path).split('.')[0] for path in spk_wavs]
+        # spk_wavs_names   = spk # only spk name -> r1_1111anger
+        valid_wavs_names += spk_wavs_names
+
+    for spk in test_spks:
+        spk_wavs        = glob(f'{cfg.data_path}/{spk}/*.wav')
+        spk_wavs_names  = [os.path.basename(path).split('.')[0] for path in spk_wavs]
+        # # test_wavs_names += spk_wavs_names
+        # spk_wavs         = glob(f'{spk}.wav') # spk fullname -> r1_1111anger.wav
+        # spk_wavs_names   = spk 
+        test_wavs_names += spk_wavs_names
+    
+    all_wavs         = glob(f'{cfg.data_path}/*/*.wav')
+    
+    print(f'Total files: {len(all_wavs)}, Train: {len(train_wavs_names)}, Valid: {len(valid_wavs_names)}, Test: {len(test_wavs_names)}, Del Files: {len(all_wavs)-len(train_wavs_names)-len(valid_wavs_names)-len(test_wavs_names)}')
+    
+    return all_wavs, train_wavs_names, valid_wavs_names, test_wavs_names
+
+
 #-------------------------------------------------------UNUSED FUNCTIONS-------------------------------------------------------#
 
 # ONLY LOAD AND PROCESS WAV FILE
@@ -146,7 +222,6 @@ def LoadWav(path, cfg):
 
     return wav, wav_name
 
-
 # ONLY CALCULATE LOG-MEL SPECTROGRAM OF THE WAV FILE
 def GetLogMel(wav, cfg):
 
@@ -177,65 +252,6 @@ def GetLogMel(wav, cfg):
     lf0[nonzeros_indices] = np.log(f0[nonzeros_indices]) # for f0(Hz), lf0 > 0 when f0 != 0
     
     return mel, lf0, mel.shape[0]
-
-# TODO: CHECK AND REMOVE IF NOT NEEDED
-def GetSpeakerInfo(cfg):
-    
-    # spk_info = open(cfg.spk_info_path, 'r')
-    files = os.listdir(cfg.data_path)
-    all_spks_name = []
-    all_spks_id   = []
-    for file in files:
-        if file.endswith('.wav') and file.split('.')[0] not in all_spks_name:
-            all_spks_name.append(filename)
-
-    for filename in all_spks_name:
-        if filename.split('_')[0] not in all_spks_id:
-            all_spks_id.append(filename.split('_')[0])
-    return all_spks_name, all_spks_id
-
-
-# TODO: CHECK AND REMOVE IF NOT NEEDED
-def SplitDataset(all_spks_name, cfg):
-    
-    all_spks_name = sorted(all_spks_name)
-    random.shuffle(all_spks_name)
-    # TODO: DO WE NEED SEPERATE TRAIN, TEST, VALID SPEAKERS?
-    # train_spks = all_spks_name[:-cfg.eval_spks * 2] # except valid and test unseen speakers
-    # valid_spks = all_spks_name[-cfg.eval_spks * 2:-cfg.eval_spks]
-    # test_spks  = all_spks_name[-cfg.eval_spks:]
-
-    train_wavs_names = []
-    valid_wavs_names = []
-    test_wavs_names  = []
-    
-    for spk in train_spks:
-        spk_wavs       = glob(f'{spk}.wav') # spk is the speaker name
-        spk_wavs_names = spk
-        valid_names    = random.sample(spk_wavs_names, int(len(spk_wavs_names) * cfg.s2s_portion)) #valid set portion: 0.1
-        train_names    = [n for n in spk_wavs_names if n not in valid_names] # train set portion: 0.9
-        test_names     = random.sample(train_names, int(len(spk_wavs_names) * cfg.s2s_portion))
-        train_names    = [n for n in train_names if n not in test_names] # test set portion: 0.1
-
-        train_wavs_names += train_names
-        valid_wavs_names += valid_names
-        test_wavs_names  += test_names
-
-    for spk in valid_spks:
-        spk_wavs         = glob(f'{cfg.data_path}/{spk}/*mic1*') # list of files
-        spk_wavs_names   = [os.path.basename(p).split('.')[0] for p in spk_wavs]
-        valid_wavs_names += spk_wavs_names
-
-    for spk in test_spks:
-        spk_wavs        = glob(f'{cfg.data_path}/{spk}/*mic1*')
-        spk_wavs_names  = [os.path.basename(p).split('.')[0] for p in spk_wavs]
-        test_wavs_names += spk_wavs_names
-    
-    all_wavs         = glob(f'{cfg.data_path}/*/*wav')
-    
-    print(f'Total files: {len(all_wavs)}, Train: {len(train_wavs_names)}, Valid: {len(valid_wavs_names)}, Test: {len(test_wavs_names)}, Del Files: {len(all_wavs)-len(train_wavs_names)-len(valid_wavs_names)-len(test_wavs_names)}')
-    
-    return all_wavs, train_wavs_names, valid_wavs_names, test_wavs_names
 
 # TODO: CHECK AND REMOVE IF NOT NEEDED
 def GetMetaResults(train_results, valid_results, test_results, cfg):

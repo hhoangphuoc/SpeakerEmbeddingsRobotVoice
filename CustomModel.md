@@ -54,8 +54,12 @@ Restructure the folder directory and file structure, by running the file `proces
 
 - Sample rate: 16kHz
 - Normalise audio: pitch, volume, tempo (optional?)
--
+- ***
 
----
+### Preprocessing - Train test split
+
+- Modified the configuration in file: `modified_audio_process.py`
+- All audios are split into 3 sets: train, val, test based on the 24 speakers and audios
+- Train: 80%, Val: 10% and Test: 10%
 
 ## Models
