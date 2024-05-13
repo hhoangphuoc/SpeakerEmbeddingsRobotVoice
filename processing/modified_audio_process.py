@@ -23,11 +23,9 @@ import resampy
 import pyworld as pw
 
 
-# import spectrogram from TRIAAN-VC models
-
-
-from models.triaanvc.preprocess.spectrogram import logmelspectrogram
-
+# # import spectrogram from TRIAAN-VC models instead of copy it to new file
+# from models.triaanvc.preprocess.spectrogram import logmelspectrogram
+from processing.spectrogram import logmelspectrogram
 
 def ProcessingTrainData(path, cfg):
     """
@@ -108,8 +106,6 @@ def SaveFeatures(wav_name, info, mode, cfg):
 def NormalizeLogMel(wav_name, mel, mean, std):
     mel = (mel - mean) / (std + 1e-8)
     return wav_name, mel
-
-
 
 ##-------------------------------------------------------Train test split-------------------------------------------------------##
 def GetSpeakerInfo(cfg):

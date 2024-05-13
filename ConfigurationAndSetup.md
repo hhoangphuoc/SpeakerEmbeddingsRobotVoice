@@ -48,3 +48,7 @@
 > We can customise the robot voice by converting from human voice, but currently, it only work with non-verbal voice, and emotional expression.
 
 ### Observations
+
+---
+
+# Using Custom Model

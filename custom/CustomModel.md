@@ -63,3 +63,15 @@ Restructure the folder directory and file structure, by running the file `proces
 - Train: 80%, Val: 10% and Test: 10%
 
 ## Models
+
+### Custom Preprocessing
+
+- File used: `custom_preprocessing.py`
+
+### Custom Train, Test
+
+- File used: `custom_main.py`
+
+### Custom Convert model
+
+- File used: `custom_convert.py`
