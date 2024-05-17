@@ -64,6 +64,10 @@ Restructure the folder directory and file structure, by running the file `proces
 
 ## Models
 
+### Configuration The model parameters and architecture:
+
+-Configuration file: `modelconfiguration.yaml`
+
 ### Custom Preprocessing
 
 - File used: `custom_preprocessing.py`

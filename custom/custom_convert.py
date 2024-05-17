@@ -17,7 +17,7 @@ import soundfile as sf
 import torch
 import kaldiio
 
-
+from models.triaanvc.model import *
 from models.triaanvc.src.train import *
 from models.triaanvc.src.dataset import *
 from models.triaanvc.src.utils import *
@@ -141,9 +141,9 @@ def main(cfg):
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='./config/base.yaml', help='config yaml file')
+    parser.add_argument('--config', type=str, default='../custom_config/modelconfiguration.yaml', help='config yaml file')
     parser.add_argument('--device', type=str, default='cuda:0', help='Cuda device')
-    parser.add_argument('--sample_path', type=str, default='./samples', help='Sample path')
+    parser.add_argument('--sample_path', type=str, default='../data/Phuoc/input', help='Sample path')
     parser.add_argument('--src_name', type=str, nargs='+', default=['src.flac'], help='Sample source name')
     parser.add_argument('--trg_name', type=str, nargs='+', default=['trg.flac'], help='Sample target name')
 
