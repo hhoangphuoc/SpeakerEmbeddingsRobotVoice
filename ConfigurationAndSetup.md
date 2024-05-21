@@ -38,6 +38,10 @@
 !python convert.py --device cpu --sample_path ../../data --src_name [source_file_name] --trg_name [target_file_name] --checkpoint ./checkpoints
 ```
 
+```python
+python convert.py --device cpu --sample_path ../../data/Phuoc/testing_conversion/processed --src_name normamplitude1_manreading1.wav --trg_name normamplitude2_best1137surprise.wav --checkpoint ./checkpoints
+```
+
 ### Output
 
 - Test with sample voice - src: `conversion_test_source.wav`, trg: `conversion_test_target.wav`
